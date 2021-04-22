@@ -1,0 +1,92 @@
+# variables:
+#   namespace: 'vue-sample'
+#   dockerAuthSecretName: 'acr-secret'
+
+
+# steps:
+# - powershell: |
+#    '# $(appName)/deployment.yaml
+#    apiVersion: apps/v1
+#    kind: Deployment
+#    metadata:
+#        name: $(appName)
+#        labels:
+#            app: $(appName)
+#    spec:
+#        replicas: 2
+#        selector:
+#            matchLabels:
+#                app: $(appName)
+#        template:
+#            metadata:
+#                labels:
+#                    app: $(appName)
+#            spec:
+#                containers:
+#                    - name: $(appName)
+#                      image: mxbsouthcentralus.azurecr.io/direct-sell-api:$(Build.BuildId)
+#                      imagePullPolicy:
+#                      ports:
+#                        - name: http
+#                          containerPort: 8080
+#                          protocol: TCP
+
+#    ---
+
+#    # $(appName)/service.yaml
+#    apiVersion: v1
+#    kind: Service
+#    metadata:
+#        name: $(appName)
+#        labels:
+#            app: $(appName)
+#    spec:
+#        type: ClusterIP
+#        ports:
+#            - port: 8080
+#              targetPort: 8080
+#              protocol: TCP
+#              name: http
+#        selector:
+#            app: $(appName)
+
+#    ---
+
+#    # $(appName)/ingress.yaml
+#    apiVersion: networking.k8s.io/v1beta1
+#    kind: Ingress
+#    metadata:
+#        name: $(appName)
+#        labels:
+#            app: $(appName)
+#        annotations:
+#           kubernetes.io/ingress.class: nginx
+#           cert-manager.io/cluster-issuer: letsencrypt-prod
+#           nginx.ingress.kubernetes.io/use-regex: "true"
+#           nginx.ingress.kubernetes.io/rewrite-target: /$2
+#    spec:
+#        tls:
+#        - hosts:
+#           - $(host)
+#          secretName: tls-secret
+#        rules:
+#        -  host:  $(host)
+#           http:
+#              paths:
+#               - path:  /$(appName)(/|$)(.*)
+#                 backend:
+#                     serviceName: $(appName)
+#                     servicePort: 8080
+#    ' | Set-Content $(Agent.TempDirectory)/manifest.yaml
+#   failOnStderr: true
+#   showWarnings: true
+#   displayName: 'Generate Kubernetes Manifest file'
+# - task: KubernetesManifest@0
+#   displayName: 'Kubernetes Manifest Deploy'
+#   inputs:
+#     kubernetesServiceConnection: 'MxB-dev-mxb-dev-aks-mxb-1617557168028'
+#     namespace: '$(namespace)'
+#     manifests: '$(Agent.TempDirectory)/manifest.yaml'
+#     imagePullSecrets: '$(dockerAuthSecretName)'
+
+

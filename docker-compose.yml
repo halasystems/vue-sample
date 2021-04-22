@@ -1,0 +1,17 @@
+version: '3.7'
+
+networks:
+  node-network:
+    driver: bridge
+
+services:
+  vue-app: &vue-app
+    build: .
+    image: vue-app
+    container_name: vue_app
+    ports:
+      - '8080:8080'
+   # volumes:
+   #   - .:/app
+    networks:
+      - node-network

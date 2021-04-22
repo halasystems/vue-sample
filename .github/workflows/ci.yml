@@ -1,0 +1,19 @@
+name: App CI
+on:
+  push:
+    branches-ignore:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install modules
+        run: yarn
+
+      # - name: Run tests
+      #   run: |
+      #     make .env
+      #     yarn test

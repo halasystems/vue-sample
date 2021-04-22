@@ -1,0 +1,103 @@
+name: App CD
+on:
+  push:
+    branches:
+      - "main"
+    paths-ignore:
+      - ".github/workflows/**"
+  workflow_dispatch:
+
+jobs:
+  push_to_registry:
+    name: Push Docker image to Azure Container
+
+    runs-on: ubuntu-latest
+
+    env:
+      AKS_NAMESPACE: "mxb"
+      REGISTRY_NAME: "mxbsouthcentralus"
+      REGISTRY_URL: "mxbsouthcentralus.azurecr.io"
+      REPOSITORY_URL: "mxbsouthcentralus.azurecr.io/vue-sample"
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Install modules
+        run: yarn
+
+      # - name: Run tests
+      #   run: |
+      #     make .env
+      #     yarn test
+
+      - name: Release
+        #uses: codfish/semantic-release-action@v1
+        run: npx semantic-release
+        working-directory: apps
+        id: semantic
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker
+        # env:
+        #   TAG: v$RELEASE_VERSION
+        run: docker build . -t ${{env.REPOSITORY_URL}}:${{ github.sha }} -t ${{env.REPOSITORY_URL}}:latest --label dockerfile-path=Dockerfile
+
+      - uses: azure/docker-login@v1
+        with:
+          login-server: ${{env.REGISTRY_URL}}
+          username: ${{ secrets.acr_mxbsouthcentralus_username }}
+          password: ${{ secrets.acr_mxbsouthcentralus_password }}
+
+      - name: Push image to ACR
+        id: push-image
+        #nv:
+        #  TAG: v$RELEASE_VERSION
+        run: |
+          docker push ${{env.REPOSITORY_URL}}:${{ github.sha }}
+
+      # - uses: azure/k8s-set-context@v1
+      #   with:
+      #     kubeconfig: ${{ secrets.aks_mxbdevaks_kubeConfig }}
+      #   id: login
+
+      # - name: Create namespace
+      #   run: |
+      #     namespacePresent=`kubectl get namespace | grep ${{env.AKS_NAMESPACE}} | wc -l`
+      #     if [ $namespacePresent -eq 0 ]
+      #     then
+      #         echo `kubectl create namespace ${{env.AKS_NAMESPACE}}`
+      #     fi
+
+      # - name: "Create container registry image pull secret"
+      #   uses: azure/k8s-create-secret@v1
+      #   with:
+      #     namespace: ${{env.AKS_NAMESPACE}}
+      #     container-registry-url:  ${{env.REGISTRY_URL}}
+      #     container-registry-username: ${{ secrets.acr_mxbsouthcentralus_username }}
+      #     container-registry-password: ${{ secrets.acr_mxbsouthcentralus_password }}
+      #     secret-name: acr-secret
+
+      # - name:  "Deploy to AKS"
+      #   uses: azure/k8s-deploy@v1.2
+      #   timeout-minutes: 5
+      #   with:
+      #     namespace: ${{env.AKS_NAMESPACE}}
+      #     manifests: |
+      #       apps/manifests/deployment.yml
+      #       apps/manifests/service.yml
+      #       apps/manifests/ingress.yml
+      #     images: |
+      #      ${{env.REPOSITORY_URL}}:${{ github.sha }}
+      #     imagepullsecrets: |
+      #       acr-secret
+      #     #strategy: canary
+      #     #percentage: 100
+
+    #  - name: "If azure deployment was not succeeded"
+    #   if: failure()
+    #   run: |
+    #     kubectl rollout undo deployment/${{env.NAMESPACE}} --namespace ${{env.NAMESPACE}}
